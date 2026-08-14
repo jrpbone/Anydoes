@@ -4,26 +4,46 @@ abstract final class CalmSkyTheme {
   static const _sky = Color(0xFF2878E3);
   static const _canvas = Color(0xFFF4F7FB);
 
-  static ThemeData light() {
+  static ThemeData light({bool highContrast = false}) =>
+      _theme(brightness: Brightness.light, highContrast: highContrast);
+
+  static ThemeData dark({bool highContrast = false}) =>
+      _theme(brightness: Brightness.dark, highContrast: highContrast);
+
+  static ThemeData _theme({
+    required Brightness brightness,
+    required bool highContrast,
+  }) {
+    final dark = brightness == Brightness.dark;
     final scheme =
         ColorScheme.fromSeed(
           seedColor: _sky,
-          brightness: Brightness.light,
-          surface: _canvas,
+          brightness: brightness,
+          surface: dark ? const Color(0xFF10151D) : _canvas,
         ).copyWith(
-          primary: _sky,
-          primaryContainer: const Color(0xFFDCEAFF),
-          onPrimaryContainer: const Color(0xFF0B3C7D),
-          surface: _canvas,
-          surfaceContainerLowest: Colors.white,
-          surfaceContainerLow: const Color(0xFFF9FBFF),
-          outline: const Color(0xFFC8D2E1),
-          outlineVariant: const Color(0xFFE1E7F0),
+          primary: dark ? const Color(0xFF9CC4FF) : _sky,
+          primaryContainer: dark
+              ? const Color(0xFF17477E)
+              : const Color(0xFFDCEAFF),
+          onPrimaryContainer: dark
+              ? const Color(0xFFE7F1FF)
+              : const Color(0xFF0B3C7D),
+          surface: dark ? const Color(0xFF10151D) : _canvas,
+          surfaceContainerLowest: dark ? const Color(0xFF151B24) : Colors.white,
+          surfaceContainerLow: dark
+              ? const Color(0xFF1B222D)
+              : const Color(0xFFF9FBFF),
+          outline: highContrast
+              ? (dark ? Colors.white : const Color(0xFF26354A))
+              : (dark ? const Color(0xFF8793A4) : const Color(0xFFC8D2E1)),
+          outlineVariant: highContrast
+              ? (dark ? const Color(0xFFD7E2F2) : const Color(0xFF596A82))
+              : (dark ? const Color(0xFF394452) : const Color(0xFFE1E7F0)),
         );
     final base = ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
-      scaffoldBackgroundColor: _canvas,
+      scaffoldBackgroundColor: scheme.surface,
     );
     return base.copyWith(
       textTheme: base.textTheme.copyWith(
@@ -45,7 +65,7 @@ abstract final class CalmSkyTheme {
         bodyMedium: base.textTheme.bodyMedium?.copyWith(height: 1.4),
       ),
       cardTheme: CardThemeData(
-        color: Colors.white,
+        color: scheme.surfaceContainerLowest,
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
@@ -55,7 +75,7 @@ abstract final class CalmSkyTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.white,
+        fillColor: scheme.surfaceContainerLowest,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
@@ -67,12 +87,12 @@ abstract final class CalmSkyTheme {
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: Colors.white,
+        backgroundColor: scheme.surfaceContainerLowest,
         indicatorColor: scheme.primaryContainer,
         elevation: 0,
       ),
       navigationRailTheme: NavigationRailThemeData(
-        backgroundColor: Colors.white,
+        backgroundColor: scheme.surfaceContainerLowest,
         indicatorColor: scheme.primaryContainer,
         selectedIconTheme: IconThemeData(color: scheme.primary),
         selectedLabelTextStyle: TextStyle(

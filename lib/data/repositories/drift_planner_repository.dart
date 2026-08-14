@@ -123,6 +123,15 @@ final class DriftPlannerRepository implements PlannerRepository {
             int.tryParse(settings['maximumSessionMinutes'] ?? '') ?? 90,
         notificationOffsetMinutes:
             int.tryParse(settings['notificationOffsetMinutes'] ?? '') ?? 0,
+        notificationsEnabled:
+            bool.tryParse(settings['notificationsEnabled'] ?? '') ?? true,
+        themeMode:
+            AppThemeMode.values
+                .where((mode) => mode.name == settings['themeMode'])
+                .firstOrNull ??
+            AppThemeMode.system,
+        highContrast: bool.tryParse(settings['highContrast'] ?? '') ?? false,
+        reduceMotion: bool.tryParse(settings['reduceMotion'] ?? '') ?? false,
       ),
     );
   }
@@ -324,6 +333,28 @@ final class DriftPlannerRepository implements PlannerRepository {
                 ),
               );
         }
+      }
+    });
+    _notify();
+  });
+
+  @override
+  Future<void> savePreferences(
+    PlanningPreferences preferences,
+  ) => _guard(() async {
+    await database.transaction(() async {
+      final values = <String, String>{
+        'horizonDays': '${preferences.horizonDays}',
+        'minimumSessionMinutes': '${preferences.defaultMinimumSessionMinutes}',
+        'maximumSessionMinutes': '${preferences.defaultMaximumSessionMinutes}',
+        'notificationOffsetMinutes': '${preferences.notificationOffsetMinutes}',
+        'notificationsEnabled': '${preferences.notificationsEnabled}',
+        'themeMode': preferences.themeMode.name,
+        'highContrast': '${preferences.highContrast}',
+        'reduceMotion': '${preferences.reduceMotion}',
+      };
+      for (final entry in values.entries) {
+        await _writeSetting(entry.key, entry.value, InsertMode.insertOrReplace);
       }
     });
     _notify();
@@ -584,6 +615,26 @@ final class DriftPlannerRepository implements PlannerRepository {
     await _writeSetting(
       'notificationOffsetMinutes',
       '${snapshot.preferences.notificationOffsetMinutes}',
+      InsertMode.insertOrReplace,
+    );
+    await _writeSetting(
+      'notificationsEnabled',
+      '${snapshot.preferences.notificationsEnabled}',
+      InsertMode.insertOrReplace,
+    );
+    await _writeSetting(
+      'themeMode',
+      snapshot.preferences.themeMode.name,
+      InsertMode.insertOrReplace,
+    );
+    await _writeSetting(
+      'highContrast',
+      '${snapshot.preferences.highContrast}',
+      InsertMode.insertOrReplace,
+    );
+    await _writeSetting(
+      'reduceMotion',
+      '${snapshot.preferences.reduceMotion}',
       InsertMode.insertOrReplace,
     );
   }

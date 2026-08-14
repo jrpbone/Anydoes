@@ -37,4 +37,27 @@ final class PlannerSnapshot {
   final List<AvailabilityWindow> weeklyAvailability;
   final List<AvailabilityException> availabilityExceptions;
   final PlanningPreferences preferences;
+
+  PlannerSnapshot copyWith({
+    List<PlannerTask>? tasks,
+    List<ScheduleBlock>? blocks,
+    List<TaskList>? lists,
+    List<TaskTag>? tags,
+    List<LocalProfile>? profiles,
+    List<RecurrenceRule>? recurrenceRules,
+    List<AvailabilityWindow>? weeklyAvailability,
+    List<AvailabilityException>? availabilityExceptions,
+    PlanningPreferences? preferences,
+  }) => PlannerSnapshot(
+    tasks: tasks ?? this.tasks,
+    blocks: blocks ?? this.blocks,
+    lists: lists ?? this.lists,
+    tags: tags ?? this.tags,
+    profiles: profiles ?? this.profiles,
+    recurrenceRules: recurrenceRules ?? this.recurrenceRules,
+    weeklyAvailability: weeklyAvailability ?? this.weeklyAvailability,
+    availabilityExceptions:
+        availabilityExceptions ?? this.availabilityExceptions,
+    preferences: preferences ?? this.preferences,
+  );
 }

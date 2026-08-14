@@ -1,6 +1,7 @@
 import 'package:anydoes/domain/models/availability.dart';
 import 'package:anydoes/domain/models/planner_snapshot.dart';
 import 'package:anydoes/domain/models/profile.dart';
+import 'package:anydoes/domain/models/planning_preferences.dart';
 import 'package:anydoes/domain/models/recurrence_rule.dart';
 import 'package:anydoes/domain/models/schedule_block.dart';
 import 'package:anydoes/domain/models/tag.dart';
@@ -29,6 +30,7 @@ abstract interface class PlannerRepository {
     required List<AvailabilityWindow> weekly,
     required List<AvailabilityException> exceptions,
   });
+  Future<void> savePreferences(PlanningPreferences preferences);
   Future<void> acceptProposal(Iterable<ScheduleBlock> blocks);
   Future<void> saveBlock(ScheduleBlock block);
   Future<void> completeBlock(String blockId, DateTime completedAt);

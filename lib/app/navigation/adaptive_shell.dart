@@ -1,9 +1,9 @@
 import 'package:anydoes/app/navigation/app_destination.dart';
 import 'package:anydoes/core/layout/breakpoints.dart';
-import 'package:anydoes/core/widgets/empty_state.dart';
 import 'package:anydoes/features/profiles/profiles_screen.dart';
 import 'package:anydoes/features/plan/plan_screen.dart';
 import 'package:anydoes/features/tasks/tasks_screen.dart';
+import 'package:anydoes/features/settings/settings_screen.dart';
 import 'package:flutter/material.dart';
 
 class AdaptiveShell extends StatefulWidget {
@@ -21,11 +21,7 @@ class _AdaptiveShellState extends State<AdaptiveShell> {
     PlanScreen(),
     TasksScreen(),
     ProfilesScreen(),
-    EmptyState(
-      icon: Icons.tune,
-      title: 'Make planning yours',
-      message: 'Availability, reminders, appearance, and backups live here.',
-    ),
+    SettingsScreen(),
   ];
 
   void _select(int index) {
