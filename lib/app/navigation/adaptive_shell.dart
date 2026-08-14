@@ -2,6 +2,7 @@ import 'package:anydoes/app/navigation/app_destination.dart';
 import 'package:anydoes/core/layout/breakpoints.dart';
 import 'package:anydoes/core/widgets/empty_state.dart';
 import 'package:anydoes/features/profiles/profiles_screen.dart';
+import 'package:anydoes/features/plan/plan_screen.dart';
 import 'package:anydoes/features/tasks/tasks_screen.dart';
 import 'package:flutter/material.dart';
 
@@ -17,11 +18,7 @@ class _AdaptiveShellState extends State<AdaptiveShell> {
   final Set<int> _visited = {0};
 
   static const _pages = <Widget>[
-    EmptyState(
-      icon: Icons.auto_awesome_outlined,
-      title: 'Shape your day',
-      message: 'Your schedule and planning suggestions will appear here.',
-    ),
+    PlanScreen(),
     TasksScreen(),
     ProfilesScreen(),
     EmptyState(

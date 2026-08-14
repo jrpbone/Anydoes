@@ -5,10 +5,12 @@ import 'package:anydoes/core/result/app_failure.dart';
 import 'package:anydoes/core/time/clock.dart';
 import 'package:anydoes/domain/models/planner_snapshot.dart';
 import 'package:anydoes/domain/models/schedule_block.dart';
+import 'package:anydoes/domain/models/task.dart';
 import 'package:anydoes/domain/scheduling/free_interval_finder.dart';
 import 'package:anydoes/domain/scheduling/planning_input.dart';
 import 'package:anydoes/domain/scheduling/planning_result.dart';
 import 'package:anydoes/domain/scheduling/scheduling_engine.dart';
+import 'package:anydoes/domain/scheduling/task_ranker.dart';
 import 'package:anydoes/domain/repositories/planner_repository.dart';
 import 'package:anydoes/features/plan/plan_state.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -132,10 +134,15 @@ final class PlanController extends StateNotifier<PlanState> {
     );
   }
 
-  bool _isValidPlacement(PlannedBlock candidate) {
+  bool _isValidPlacement(
+    PlannedBlock candidate, {
+    String? ignoredAcceptedBlockId,
+  }) {
     final occupied = <ScheduleBlock>[
       ...state.snapshot.blocks.where(
-        (block) => block.completionState == BlockCompletionState.pending,
+        (block) =>
+            block.id != ignoredAcceptedBlockId &&
+            block.completionState == BlockCompletionState.pending,
       ),
       for (final block in state.proposalBlocks)
         if (block.id != candidate.id) block.toScheduleBlock(),
@@ -213,6 +220,61 @@ final class PlanController extends StateNotifier<PlanState> {
     }
   }
 
+  Future<void> moveAcceptedBlock(ScheduleBlock block, DateTime newStart) async {
+    final candidate = PlannedBlock(
+      id: block.id,
+      taskId: block.taskId ?? '',
+      start: newStart.toUtc(),
+      end: newStart.toUtc().add(block.duration),
+      reason: SchedulingReason.durationPressure,
+      isLocked: true,
+    );
+    if (!_isValidPlacement(candidate, ignoredAcceptedBlockId: block.id)) {
+      _setFailure(
+        const AppFailure(
+          code: AppFailureCode.validation,
+          message: 'That time is unavailable or overlaps another block.',
+          recovery: 'Choose an open time within your availability.',
+        ),
+      );
+      return;
+    }
+    await _repository.saveBlock(
+      block.copyWith(
+        start: candidate.start,
+        end: candidate.end,
+        isLocked: true,
+      ),
+    );
+  }
+
+  Future<void> resizeAcceptedBlock(
+    ScheduleBlock block,
+    Duration duration,
+  ) async {
+    final candidate = PlannedBlock(
+      id: block.id,
+      taskId: block.taskId ?? '',
+      start: block.start,
+      end: block.start.add(duration),
+      reason: SchedulingReason.durationPressure,
+      isLocked: true,
+    );
+    if (!_isValidPlacement(candidate, ignoredAcceptedBlockId: block.id)) {
+      _setFailure(
+        const AppFailure(
+          code: AppFailureCode.validation,
+          message: 'That duration overlaps unavailable time.',
+          recovery: 'Choose a shorter duration.',
+        ),
+      );
+      return;
+    }
+    await _repository.saveBlock(
+      block.copyWith(end: candidate.end, isLocked: true),
+    );
+  }
+
   Future<void> completeTask(
     String taskId, {
     required bool removeFutureBlocks,
@@ -223,6 +285,41 @@ final class PlanController extends StateNotifier<PlanState> {
   );
 
   Future<void> replan() => createProposal(reconsiderAccepted: true);
+
+  Future<void> applyRecoveryAction(
+    PlanningConflict conflict,
+    RecoveryAction action,
+  ) async {
+    final task = state.snapshot.tasks
+        .where((item) => item.id == conflict.taskId)
+        .firstOrNull;
+    if (task == null) return;
+    final now = _clock.now();
+    PlannerTask updated;
+    switch (action) {
+      case RecoveryAction.extendDeadline:
+      case RecoveryAction.nextAvailableSlot:
+        updated = task.copyWith(
+          deadline: (task.deadline ?? now).add(const Duration(days: 7)),
+          updatedAt: now,
+        );
+      case RecoveryAction.reduceDuration:
+        final completed =
+            (task.estimatedMinutes ?? 0) - (task.remainingMinutes ?? 0);
+        final remaining =
+            (task.remainingMinutes ?? 0) - conflict.missingMinutes;
+        final safeRemaining = remaining < 5 ? 5 : remaining;
+        updated = task.copyWith(
+          estimatedMinutes: completed + safeRemaining,
+          remainingMinutes: safeRemaining,
+          updatedAt: now,
+        );
+      case RecoveryAction.makeSplittable:
+        updated = task.copyWith(allowSplit: true, updatedAt: now);
+    }
+    await _repository.saveTask(updated);
+    await createProposal();
+  }
 
   void _setFailure(Object error) {
     state = state.copyWith(
