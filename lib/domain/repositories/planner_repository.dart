@@ -31,7 +31,10 @@ abstract interface class PlannerRepository {
     required List<AvailabilityException> exceptions,
   });
   Future<void> savePreferences(PlanningPreferences preferences);
-  Future<void> acceptProposal(Iterable<ScheduleBlock> blocks);
+  Future<void> acceptProposal(
+    Iterable<ScheduleBlock> blocks, {
+    Iterable<String> replaceBlockIds = const [],
+  });
   Future<void> saveBlock(ScheduleBlock block);
   Future<void> completeBlock(String blockId, DateTime completedAt);
   Future<void> completeTask(

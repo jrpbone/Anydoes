@@ -361,19 +361,28 @@ final class DriftPlannerRepository implements PlannerRepository {
   });
 
   @override
-  Future<void> acceptProposal(Iterable<ScheduleBlock> blocks) =>
-      _guard(() async {
-        await database.transaction(() async {
-          for (final block in blocks) {
-            await database
-                .into(database.scheduleBlockEntries)
-                .insertOnConflictUpdate(
-                  block.toCompanion(forceState: ScheduleBlockState.accepted),
-                );
-          }
-        });
-        _notify();
-      });
+  Future<void> acceptProposal(
+    Iterable<ScheduleBlock> blocks, {
+    Iterable<String> replaceBlockIds = const [],
+  }) => _guard(() async {
+    final accepted = blocks.toList();
+    final replacedIds = replaceBlockIds.toSet().toList();
+    await database.transaction(() async {
+      if (replacedIds.isNotEmpty) {
+        await (database.delete(
+          database.scheduleBlockEntries,
+        )..where((row) => row.id.isIn(replacedIds))).go();
+      }
+      for (final block in accepted) {
+        await database
+            .into(database.scheduleBlockEntries)
+            .insertOnConflictUpdate(
+              block.toCompanion(forceState: ScheduleBlockState.accepted),
+            );
+      }
+    });
+    _notify();
+  });
 
   @override
   Future<void> saveBlock(ScheduleBlock block) => _write(

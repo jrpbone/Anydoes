@@ -1,4 +1,7 @@
 import 'package:anydoes/domain/models/task_list.dart';
+import 'package:anydoes/domain/models/task.dart';
+import 'package:anydoes/domain/models/schedule_block.dart';
+import 'package:anydoes/domain/repositories/planner_repository.dart';
 import 'package:anydoes/features/tasks/tasks_controller.dart';
 import 'package:anydoes/features/tasks/widgets/quick_capture.dart';
 import 'package:anydoes/features/tasks/widgets/task_editor.dart';
@@ -136,6 +139,16 @@ class _TaskContent extends StatelessWidget {
                     onPressed: () => _exportList(context, state.query.listId!),
                     icon: const Icon(Icons.ios_share_outlined),
                   ),
+                  if (state.query.listId != 'inbox') ...[
+                    const SizedBox(width: 8),
+                    IconButton.outlined(
+                      key: const Key('delete-selected-list'),
+                      tooltip: 'Delete selected list',
+                      onPressed: () =>
+                          _deleteSelectedList(context, state.query.listId!),
+                      icon: const Icon(Icons.delete_outline),
+                    ),
+                  ],
                 ],
               ],
             ),
@@ -162,6 +175,11 @@ class _TaskContent extends StatelessWidget {
             TaskFilters(
               query: state.query,
               onStatusChanged: controller.setStatus,
+              profiles: state.snapshot.profiles,
+              tags: state.snapshot.tags,
+              onPriorityChanged: controller.setPriority,
+              onAssigneeChanged: controller.setAssignee,
+              onTagChanged: controller.setTag,
             ),
             if (state.failure != null) ...[
               const SizedBox(height: 8),
@@ -196,7 +214,8 @@ class _TaskContent extends StatelessWidget {
         final task = state.visibleTasks[index];
         return TaskTile(
           task: task,
-          onComplete: (value) => controller.toggleComplete(task, value),
+          onTap: () => _openEditor(context, task),
+          onComplete: (value) => _toggleComplete(context, task, value),
           onArchive: () => controller.archive(task),
         );
       },
@@ -216,13 +235,106 @@ class _TaskContent extends StatelessWidget {
     );
   }
 
-  Future<void> _openEditor(BuildContext context) async {
+  Future<void> _openEditor(
+    BuildContext context, [
+    PlannerTask? existing,
+  ]) async {
     final draft = await showDialog<TaskDraft>(
       context: context,
-      builder: (_) => TaskEditor(snapshot: state.snapshot),
+      builder: (_) =>
+          TaskEditor(snapshot: state.snapshot, initialTask: existing),
     );
     if (draft != null) {
-      await controller.createTask(draft);
+      if (existing == null) {
+        await controller.createTask(draft);
+      } else {
+        await controller.updateTask(existing, draft);
+      }
+    }
+  }
+
+  Future<void> _deleteSelectedList(BuildContext context, String listId) async {
+    final taskCount = state.snapshot.tasks
+        .where((task) => task.listId == listId)
+        .length;
+    final policy = await showDialog<ListDeletionPolicy>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete list?'),
+        content: Text(
+          taskCount == 0
+              ? 'This removes the selected list.'
+              : 'This list contains $taskCount task${taskCount == 1 ? '' : 's'}. Choose what happens to them.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          if (taskCount > 0)
+            TextButton(
+              onPressed: () => Navigator.pop(
+                dialogContext,
+                ListDeletionPolicy.moveTasksToInbox,
+              ),
+              child: const Text('Move tasks to Inbox'),
+            ),
+          FilledButton(
+            onPressed: () =>
+                Navigator.pop(dialogContext, ListDeletionPolicy.deleteTasks),
+            child: Text(
+              taskCount == 0 ? 'Delete list' : 'Delete list and tasks',
+            ),
+          ),
+        ],
+      ),
+    );
+    if (policy != null) await controller.deleteList(listId, policy);
+  }
+
+  Future<void> _toggleComplete(
+    BuildContext context,
+    PlannerTask task,
+    bool complete,
+  ) async {
+    if (!complete) {
+      await controller.toggleComplete(task, false);
+      return;
+    }
+    final hasPendingBlocks = state.snapshot.blocks.any(
+      (block) =>
+          block.taskId == task.id &&
+          block.completionState == BlockCompletionState.pending,
+    );
+    if (!hasPendingBlocks) {
+      await controller.completeTask(task, removeFutureBlocks: false);
+      return;
+    }
+    final removeBlocks = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Complete ${task.title}?'),
+        content: const Text(
+          'This task still has calendar blocks. You can keep them for reference or remove future sessions.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Complete and keep blocks'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Complete and remove blocks'),
+          ),
+        ],
+      ),
+    );
+    if (removeBlocks != null) {
+      await controller.completeTask(task, removeFutureBlocks: removeBlocks);
     }
   }
 }

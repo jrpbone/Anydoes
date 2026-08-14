@@ -13,6 +13,10 @@ class WeekCalendar extends StatelessWidget {
     required this.tasks,
     required this.onAcceptedTap,
     required this.onProposedTap,
+    required this.onAcceptedMoveBy,
+    required this.onAcceptedResizeBy,
+    required this.onProposedMoveBy,
+    required this.onProposedResizeBy,
     super.key,
   });
 
@@ -22,6 +26,10 @@ class WeekCalendar extends StatelessWidget {
   final List<PlannerTask> tasks;
   final ValueChanged<ScheduleBlock> onAcceptedTap;
   final ValueChanged<PlannedBlock> onProposedTap;
+  final void Function(ScheduleBlock, Duration) onAcceptedMoveBy;
+  final void Function(ScheduleBlock, Duration) onAcceptedResizeBy;
+  final void Function(PlannedBlock, Duration) onProposedMoveBy;
+  final void Function(PlannedBlock, Duration) onProposedResizeBy;
 
   @override
   Widget build(BuildContext context) {
@@ -79,6 +87,8 @@ class WeekCalendar extends StatelessWidget {
                     proposed: false,
                     locked: block.isLocked,
                     onTap: () => onAcceptedTap(block),
+                    onMoveBy: (delta) => onAcceptedMoveBy(block, delta),
+                    onResizeBy: (delta) => onAcceptedResizeBy(block, delta),
                   ),
                 ),
               for (final block in dayProposed)
@@ -92,6 +102,8 @@ class WeekCalendar extends StatelessWidget {
                     locked: block.isLocked,
                     reason: block.reason,
                     onTap: () => onProposedTap(block),
+                    onMoveBy: (delta) => onProposedMoveBy(block, delta),
+                    onResizeBy: (delta) => onProposedResizeBy(block, delta),
                   ),
                 ),
             ],

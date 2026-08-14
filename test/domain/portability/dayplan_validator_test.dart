@@ -197,6 +197,34 @@ void main() {
       );
     },
   );
+
+  test('full backup requires one Inbox and exactly one Me profile', () {
+    final noInbox = _mutate(valid, (payload) {
+      (payload['lists'] as List).removeWhere(
+        (value) => (value as Map<String, Object?>)['id'] == 'inbox',
+      );
+    });
+    expect(
+      validator
+          .validate(codec.decode(noInbox), fixtureSnapshot())
+          .errors
+          .any((error) => error.code == DayplanValidationCode.incomplete),
+      isTrue,
+    );
+
+    final noMe = _mutate(valid, (payload) {
+      for (final value in payload['profiles'] as List) {
+        (value as Map<String, Object?>)['isMe'] = false;
+      }
+    });
+    expect(
+      validator
+          .validate(codec.decode(noMe), fixtureSnapshot())
+          .errors
+          .any((error) => error.code == DayplanValidationCode.incomplete),
+      isTrue,
+    );
+  });
 }
 
 String _mutate(

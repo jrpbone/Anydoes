@@ -7,6 +7,8 @@ import 'package:anydoes/domain/models/recurrence_rule.dart';
 import 'package:anydoes/domain/models/tag.dart';
 import 'package:anydoes/domain/models/task.dart';
 import 'package:anydoes/domain/models/task_list.dart';
+import 'package:anydoes/domain/recurrence/recurrence_engine.dart';
+import 'package:anydoes/domain/recurrence/recurrence_service.dart';
 import 'package:anydoes/domain/repositories/planner_repository.dart';
 import 'package:anydoes/app/providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -37,6 +39,7 @@ final class TaskQuery {
     this.status = TaskStatusFilter.open,
     this.priority,
     this.assigneeProfileId,
+    this.tagId,
   });
 
   final String search;
@@ -44,6 +47,7 @@ final class TaskQuery {
   final TaskStatusFilter status;
   final TaskPriority? priority;
   final String? assigneeProfileId;
+  final String? tagId;
 
   TaskQuery copyWith({
     String? search,
@@ -54,6 +58,8 @@ final class TaskQuery {
     bool clearPriority = false,
     String? assigneeProfileId,
     bool clearAssignee = false,
+    String? tagId,
+    bool clearTag = false,
   }) {
     return TaskQuery(
       search: search ?? this.search,
@@ -63,6 +69,7 @@ final class TaskQuery {
       assigneeProfileId: clearAssignee
           ? null
           : assigneeProfileId ?? this.assigneeProfileId,
+      tagId: clearTag ? null : tagId ?? this.tagId,
     );
   }
 
@@ -79,6 +86,7 @@ final class TaskQuery {
         task.assigneeProfileId != assigneeProfileId) {
       return false;
     }
+    if (tagId != null && !task.tagIds.contains(tagId)) return false;
     return switch (status) {
       TaskStatusFilter.open => task.status == TaskStatus.open,
       TaskStatusFilter.completed => task.status == TaskStatus.completed,
@@ -166,15 +174,23 @@ final tasksControllerProvider =
     });
 
 final class TasksController extends StateNotifier<TasksState> {
-  TasksController(this._repository, this._clock, {Uuid? uuid})
-    : _uuid = uuid ?? const Uuid(),
-      super(TasksState()) {
+  TasksController(
+    this._repository,
+    this._clock, {
+    Uuid? uuid,
+    RecurrenceService? recurrenceService,
+  }) : _uuid = uuid ?? const Uuid(),
+       _recurrenceService =
+           recurrenceService ??
+           RecurrenceService(_repository, RecurrenceEngine(), _clock),
+       super(TasksState()) {
     _start();
   }
 
   final PlannerRepository _repository;
   final AppClock _clock;
   final Uuid _uuid;
+  final RecurrenceService _recurrenceService;
   StreamSubscription<PlannerSnapshot>? _subscription;
 
   Future<void> _start() async {
@@ -198,17 +214,7 @@ final class TasksController extends StateNotifier<TasksState> {
 
   Future<void> createTask(TaskDraft draft) async {
     try {
-      final tagIds = <String>{};
-      for (final rawName in draft.tagNames) {
-        final name = rawName.trim();
-        if (name.isEmpty) continue;
-        final existing = state.snapshot.tags
-            .where((tag) => tag.name.toLowerCase() == name.toLowerCase())
-            .firstOrNull;
-        final tag = existing ?? TaskTag(id: _uuid.v4(), name: name);
-        if (existing == null) await _repository.saveTag(tag);
-        tagIds.add(tag.id);
-      }
+      final tagIds = await _resolveTagIds(draft.tagNames);
       final now = _clock.now();
       final taskId = _uuid.v4();
       final recurrenceRuleId = draft.recurrence == null ? null : _uuid.v4();
@@ -250,6 +256,7 @@ final class TasksController extends StateNotifier<TasksState> {
             occurrenceCount: recurrence.occurrenceCount,
           ),
         );
+        await _materializeRecurrences();
       }
     } catch (error) {
       _setFailure(error);
@@ -257,9 +264,98 @@ final class TasksController extends StateNotifier<TasksState> {
     }
   }
 
+  Future<void> updateTask(PlannerTask existing, TaskDraft draft) async {
+    try {
+      final tagIds = await _resolveTagIds(draft.tagNames);
+      final now = _clock.now();
+      final estimatedChanged =
+          existing.estimatedMinutes != draft.estimatedMinutes;
+      final remaining = estimatedChanged
+          ? draft.estimatedMinutes == null
+                ? null
+                : existing.status == TaskStatus.completed
+                ? 0
+                : draft.estimatedMinutes
+          : existing.remainingMinutes;
+      final recurrenceId = draft.recurrence == null
+          ? null
+          : existing.recurrenceRuleId ?? _uuid.v4();
+      final updated = existing.copyWith(
+        title: draft.title,
+        notes: draft.notes,
+        listId: draft.listId,
+        parentTaskId: draft.parentTaskId,
+        priority: draft.priority,
+        earliestStart: draft.earliestStart,
+        deadline: draft.deadline,
+        estimatedMinutes: draft.estimatedMinutes,
+        remainingMinutes: remaining,
+        allowSplit: draft.allowSplit,
+        minimumSessionMinutes: draft.minimumSessionMinutes,
+        maximumSessionMinutes: draft.maximumSessionMinutes,
+        assigneeProfileId: draft.assigneeProfileId,
+        includeInMyPlan: draft.includeInMyPlan,
+        recurrenceRuleId: recurrenceId,
+        recurrenceSeriesId: draft.recurrence == null
+            ? null
+            : existing.recurrenceSeriesId ?? existing.id,
+        occurrenceDate: draft.recurrence == null
+            ? null
+            : existing.occurrenceDate ??
+                  DateTime.utc(now.year, now.month, now.day),
+        updatedAt: now,
+        tagIds: tagIds,
+      );
+      if (draft.recurrence == null) {
+        await _repository.saveTask(updated);
+      } else {
+        final recurrence = draft.recurrence!;
+        await _repository.saveTaskWithRecurrence(
+          updated,
+          RecurrenceRule(
+            id: recurrenceId!,
+            frequency: recurrence.frequency,
+            interval: recurrence.interval,
+            weekdays: recurrence.weekdays,
+            until: recurrence.until,
+            occurrenceCount: recurrence.occurrenceCount,
+          ),
+        );
+        await _materializeRecurrences();
+      }
+    } catch (error) {
+      _setFailure(error);
+      rethrow;
+    }
+  }
+
+  Future<Set<String>> _resolveTagIds(Iterable<String> rawNames) async {
+    final tagIds = <String>{};
+    for (final rawName in rawNames) {
+      final name = rawName.trim();
+      if (name.isEmpty) continue;
+      final existing = state.snapshot.tags
+          .where((tag) => tag.name.toLowerCase() == name.toLowerCase())
+          .firstOrNull;
+      final tag = existing ?? TaskTag(id: _uuid.v4(), name: name);
+      if (existing == null) await _repository.saveTag(tag);
+      tagIds.add(tag.id);
+    }
+    return tagIds;
+  }
+
   Future<void> createList(String name) => _repository.saveList(
     TaskList(id: _uuid.v4(), name: name, createdAt: _clock.now()),
   );
+
+  Future<void> deleteList(String id, ListDeletionPolicy policy) async {
+    try {
+      await _repository.deleteList(id, policy);
+      if (state.query.listId == id) selectList(null);
+    } catch (error) {
+      _setFailure(error);
+    }
+  }
 
   Future<void> toggleComplete(PlannerTask task, bool complete) =>
       _repository.saveTask(
@@ -274,6 +370,15 @@ final class TasksController extends StateNotifier<TasksState> {
           updatedAt: _clock.now(),
         ),
       );
+
+  Future<void> completeTask(
+    PlannerTask task, {
+    required bool removeFutureBlocks,
+  }) => _repository.completeTask(
+    task.id,
+    _clock.now(),
+    removeFutureBlocks: removeFutureBlocks,
+  );
 
   Future<void> archive(PlannerTask task) => _repository.saveTask(
     task.copyWith(status: TaskStatus.archived, updatedAt: _clock.now()),
@@ -295,6 +400,30 @@ final class TasksController extends StateNotifier<TasksState> {
     state = state.copyWith(query: state.query.copyWith(status: status));
   }
 
+  void setPriority(TaskPriority? priority) {
+    state = state.copyWith(
+      query: priority == null
+          ? state.query.copyWith(clearPriority: true)
+          : state.query.copyWith(priority: priority),
+    );
+  }
+
+  void setAssignee(String? profileId) {
+    state = state.copyWith(
+      query: profileId == null
+          ? state.query.copyWith(clearAssignee: true)
+          : state.query.copyWith(assigneeProfileId: profileId),
+    );
+  }
+
+  void setTag(String? tagId) {
+    state = state.copyWith(
+      query: tagId == null
+          ? state.query.copyWith(clearTag: true)
+          : state.query.copyWith(tagId: tagId),
+    );
+  }
+
   void _setFailure(Object error) {
     state = state.copyWith(
       isLoading: false,
@@ -308,6 +437,9 @@ final class TasksController extends StateNotifier<TasksState> {
             ),
     );
   }
+
+  Future<void> _materializeRecurrences() => _recurrenceService
+      .materializeThrough(_clock.now().add(const Duration(days: 90)));
 
   @override
   void dispose() {

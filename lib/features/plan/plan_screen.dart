@@ -198,6 +198,12 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
                   : const Icon(Icons.auto_awesome),
               label: const Text('Plan my tasks'),
             ),
+            OutlinedButton.icon(
+              key: const Key('add-fixed-event'),
+              onPressed: () => _addFixedEvent(controller),
+              icon: const Icon(Icons.event_available_outlined),
+              label: const Text('Add event'),
+            ),
             if (state.snapshot.blocks.any(
               (block) => block.isGenerated && !block.isLocked,
             ))
@@ -277,6 +283,18 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
     tasks: state.snapshot.tasks,
     onAcceptedTap: (block) => _editAccepted(block, state, controller),
     onProposedTap: (block) => _editProposal(block, state, controller),
+    onAcceptedMoveBy: (block, delta) =>
+        controller.moveAcceptedBlock(block, block.start.add(delta)),
+    onAcceptedResizeBy: (block, delta) => controller.resizeAcceptedBlock(
+      block,
+      _resizedDuration(block.duration, delta),
+    ),
+    onProposedMoveBy: (block, delta) =>
+        controller.moveProposalBlock(block.id, block.start.add(delta)),
+    onProposedResizeBy: (block, delta) => controller.resizeProposalBlock(
+      block.id,
+      _resizedDuration(block.duration, delta),
+    ),
   );
 
   Widget _week(PlanState state, PlanController controller) => WeekCalendar(
@@ -286,6 +304,18 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
     tasks: state.snapshot.tasks,
     onAcceptedTap: (block) => _editAccepted(block, state, controller),
     onProposedTap: (block) => _editProposal(block, state, controller),
+    onAcceptedMoveBy: (block, delta) =>
+        controller.moveAcceptedBlock(block, block.start.add(delta)),
+    onAcceptedResizeBy: (block, delta) => controller.resizeAcceptedBlock(
+      block,
+      _resizedDuration(block.duration, delta),
+    ),
+    onProposedMoveBy: (block, delta) =>
+        controller.moveProposalBlock(block.id, block.start.add(delta)),
+    onProposedResizeBy: (block, delta) => controller.resizeProposalBlock(
+      block.id,
+      _resizedDuration(block.duration, delta),
+    ),
   );
 
   Future<void> _showQueue(BuildContext context, PlanState state) =>
@@ -302,6 +332,20 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
           ),
         ),
       );
+
+  Future<void> _addFixedEvent(PlanController controller) async {
+    final draft = await showDialog<_FixedEventDraft>(
+      context: context,
+      builder: (_) => _FixedEventDialog(selectedDate: _selectedDate),
+    );
+    if (draft != null) {
+      await controller.createFixedEvent(
+        note: draft.note,
+        start: draft.start,
+        end: draft.end,
+      );
+    }
+  }
 
   Future<void> _editProposal(
     PlannedBlock block,
@@ -375,4 +419,162 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
 
   PlannerTask? _task(PlanState state, String? id) =>
       state.snapshot.tasks.where((task) => task.id == id).firstOrNull;
+
+  Duration _resizedDuration(Duration current, Duration delta) {
+    final minutes = current.inMinutes + delta.inMinutes;
+    return Duration(minutes: minutes < 5 ? 5 : minutes);
+  }
+}
+
+final class _FixedEventDraft {
+  const _FixedEventDraft({
+    required this.note,
+    required this.start,
+    required this.end,
+  });
+
+  final String note;
+  final DateTime start;
+  final DateTime end;
+}
+
+class _FixedEventDialog extends StatefulWidget {
+  const _FixedEventDialog({required this.selectedDate});
+
+  final DateTime selectedDate;
+
+  @override
+  State<_FixedEventDialog> createState() => _FixedEventDialogState();
+}
+
+class _FixedEventDialogState extends State<_FixedEventDialog> {
+  final _note = TextEditingController();
+  final _duration = TextEditingController(text: '60');
+  final _formKey = GlobalKey<FormState>();
+  late DateTime _start;
+
+  @override
+  void initState() {
+    super.initState();
+    final local = widget.selectedDate.toLocal();
+    _start = DateTime(local.year, local.month, local.day, 9);
+  }
+
+  @override
+  void dispose() {
+    _note.dispose();
+    _duration.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickDate() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: _start,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (date != null) {
+      setState(() {
+        _start = DateTime(
+          date.year,
+          date.month,
+          date.day,
+          _start.hour,
+          _start.minute,
+        );
+      });
+    }
+  }
+
+  Future<void> _pickTime() async {
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_start),
+    );
+    if (time != null) {
+      setState(() {
+        _start = DateTime(
+          _start.year,
+          _start.month,
+          _start.day,
+          time.hour,
+          time.minute,
+        );
+      });
+    }
+  }
+
+  void _save() {
+    if (!_formKey.currentState!.validate()) return;
+    final minutes = int.parse(_duration.text);
+    Navigator.pop(
+      context,
+      _FixedEventDraft(
+        note: _note.text.trim(),
+        start: _start.toUtc(),
+        end: _start.add(Duration(minutes: minutes)).toUtc(),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Add fixed event'),
+    content: Form(
+      key: _formKey,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextFormField(
+            key: const Key('fixed-event-name'),
+            controller: _note,
+            autofocus: true,
+            decoration: const InputDecoration(labelText: 'Event name'),
+            validator: (value) => value == null || value.trim().isEmpty
+                ? 'Enter an event name'
+                : null,
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton.icon(
+                onPressed: _pickDate,
+                icon: const Icon(Icons.calendar_today_outlined),
+                label: Text(DateFormat.yMMMd().format(_start)),
+              ),
+              OutlinedButton.icon(
+                onPressed: _pickTime,
+                icon: const Icon(Icons.schedule_outlined),
+                label: Text(DateFormat.jm().format(_start)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            key: const Key('fixed-event-duration'),
+            controller: _duration,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(labelText: 'Duration in minutes'),
+            validator: (value) {
+              final minutes = int.tryParse(value ?? '');
+              return minutes == null || minutes < 5
+                  ? 'Enter at least 5 minutes'
+                  : null;
+            },
+          ),
+        ],
+      ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Cancel'),
+      ),
+      FilledButton(onPressed: _save, child: const Text('Add event')),
+    ],
+  );
 }

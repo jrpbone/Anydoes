@@ -6,6 +6,8 @@ import 'package:anydoes/data/notifications/notification_reconciler.dart';
 import 'package:anydoes/data/portability/dayplan_file_service.dart';
 import 'package:anydoes/domain/notifications/notification_gateway.dart';
 import 'package:anydoes/domain/repositories/planner_repository.dart';
+import 'package:anydoes/domain/recurrence/recurrence_engine.dart';
+import 'package:anydoes/domain/recurrence/recurrence_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final appClockProvider = Provider<AppClock>((ref) => const SystemAppClock());
@@ -39,3 +41,14 @@ final notificationCoordinatorProvider =
 final dayplanFileServiceProvider = Provider<DayplanFileGateway>(
   (ref) => DayplanFileService(),
 );
+
+final recurrenceMaterializationProvider = FutureProvider<void>((ref) async {
+  final repository = ref.watch(plannerRepositoryProvider);
+  final clock = ref.watch(appClockProvider);
+  await repository.initializeDefaults();
+  await RecurrenceService(
+    repository,
+    RecurrenceEngine(),
+    clock,
+  ).materializeThrough(clock.now().add(const Duration(days: 90)));
+});

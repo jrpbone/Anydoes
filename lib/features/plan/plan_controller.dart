@@ -14,6 +14,7 @@ import 'package:anydoes/domain/scheduling/task_ranker.dart';
 import 'package:anydoes/domain/repositories/planner_repository.dart';
 import 'package:anydoes/features/plan/plan_state.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 
 final schedulingEngineProvider = Provider<SchedulingEngine>(
   (ref) => const SchedulingEngine(),
@@ -28,15 +29,18 @@ final planControllerProvider = StateNotifierProvider<PlanController, PlanState>(
 );
 
 final class PlanController extends StateNotifier<PlanState> {
-  PlanController(this._repository, this._engine, this._clock)
-    : super(PlanState()) {
+  PlanController(this._repository, this._engine, this._clock, {Uuid? uuid})
+    : _uuid = uuid ?? const Uuid(),
+      super(PlanState()) {
     _start();
   }
 
   final PlannerRepository _repository;
   final SchedulingEngine _engine;
   final AppClock _clock;
+  final Uuid _uuid;
   StreamSubscription<PlannerSnapshot>? _subscription;
+  final Set<String> _replaceableBlockIds = {};
 
   Future<void> _start() async {
     try {
@@ -69,6 +73,23 @@ final class PlanController extends StateNotifier<PlanState> {
           reconsiderUnlockedGeneratedBlocks: reconsiderAccepted,
         ),
       );
+      _replaceableBlockIds
+        ..clear()
+        ..addAll(
+          reconsiderAccepted
+              ? snapshot.blocks
+                    .where(
+                      (block) =>
+                          block.state == ScheduleBlockState.accepted &&
+                          block.completionState ==
+                              BlockCompletionState.pending &&
+                          block.isGenerated &&
+                          !block.isLocked &&
+                          block.end.isAfter(_clock.now()),
+                    )
+                    .map((block) => block.id)
+              : const <String>[],
+        );
       state = state.copyWith(
         snapshot: snapshot,
         proposalBlocks: result.blocks,
@@ -175,7 +196,13 @@ final class PlanController extends StateNotifier<PlanState> {
         .firstOrNull;
     if (block == null) return;
     try {
-      await _repository.acceptProposal([block.toScheduleBlock()]);
+      final replaced = _replaceableBlockIds.contains(block.id)
+          ? [block.id]
+          : const <String>[];
+      await _repository.acceptProposal([
+        block.toScheduleBlock(),
+      ], replaceBlockIds: replaced);
+      _replaceableBlockIds.remove(block.id);
       removeProposalBlock(id);
     } catch (error) {
       _setFailure(error);
@@ -187,7 +214,9 @@ final class PlanController extends StateNotifier<PlanState> {
     try {
       await _repository.acceptProposal(
         state.proposalBlocks.map((block) => block.toScheduleBlock()),
+        replaceBlockIds: _replaceableBlockIds,
       );
+      _replaceableBlockIds.clear();
       state = state.copyWith(proposalBlocks: const [], clearFailure: true);
     } catch (error) {
       _setFailure(error);
@@ -195,6 +224,7 @@ final class PlanController extends StateNotifier<PlanState> {
   }
 
   void discard() {
+    _replaceableBlockIds.clear();
     state = state.copyWith(
       proposalBlocks: const [],
       conflicts: const [],
@@ -214,6 +244,57 @@ final class PlanController extends StateNotifier<PlanState> {
     try {
       await _repository.saveBlock(
         block.copyWith(completionState: BlockCompletionState.skipped),
+      );
+    } catch (error) {
+      _setFailure(error);
+    }
+  }
+
+  Future<void> createFixedEvent({
+    required String note,
+    required DateTime start,
+    required DateTime end,
+  }) async {
+    final cleanNote = note.trim();
+    final startUtc = start.toUtc();
+    final endUtc = end.toUtc();
+    if (cleanNote.isEmpty || !endUtc.isAfter(startUtc)) {
+      _setFailure(
+        const AppFailure(
+          code: AppFailureCode.validation,
+          message: 'Enter an event name and an end time after its start.',
+          recovery: 'Review the fixed event details and try again.',
+        ),
+      );
+      return;
+    }
+    try {
+      final snapshot = await _repository.currentSnapshot();
+      final overlaps = snapshot.blocks.any(
+        (block) =>
+            block.completionState == BlockCompletionState.pending &&
+            startUtc.isBefore(block.end) &&
+            endUtc.isAfter(block.start),
+      );
+      if (overlaps) {
+        _setFailure(
+          const AppFailure(
+            code: AppFailureCode.validation,
+            message: 'That fixed event overlaps an existing block.',
+            recovery: 'Choose an open time and try again.',
+          ),
+        );
+        return;
+      }
+      await _repository.saveBlock(
+        ScheduleBlock(
+          id: _uuid.v4(),
+          start: startUtc,
+          end: endUtc,
+          isLocked: true,
+          isGenerated: false,
+          note: cleanNote,
+        ),
       );
     } catch (error) {
       _setFailure(error);

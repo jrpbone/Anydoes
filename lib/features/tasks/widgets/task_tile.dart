@@ -4,12 +4,14 @@ import 'package:flutter/material.dart';
 class TaskTile extends StatelessWidget {
   const TaskTile({
     required this.task,
+    required this.onTap,
     required this.onComplete,
     required this.onArchive,
     super.key,
   });
 
   final PlannerTask task;
+  final VoidCallback onTap;
   final ValueChanged<bool> onComplete;
   final VoidCallback onArchive;
 
@@ -18,6 +20,7 @@ class TaskTile extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     return Card(
       child: ListTile(
+        onTap: onTap,
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         leading: Checkbox(
           value: task.status == TaskStatus.completed,

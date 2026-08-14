@@ -13,6 +13,10 @@ class DayTimeline extends StatelessWidget {
     required this.tasks,
     required this.onAcceptedTap,
     required this.onProposedTap,
+    required this.onAcceptedMoveBy,
+    required this.onAcceptedResizeBy,
+    required this.onProposedMoveBy,
+    required this.onProposedResizeBy,
     super.key,
   });
 
@@ -22,6 +26,10 @@ class DayTimeline extends StatelessWidget {
   final List<PlannerTask> tasks;
   final ValueChanged<ScheduleBlock> onAcceptedTap;
   final ValueChanged<PlannedBlock> onProposedTap;
+  final void Function(ScheduleBlock, Duration) onAcceptedMoveBy;
+  final void Function(ScheduleBlock, Duration) onAcceptedResizeBy;
+  final void Function(PlannedBlock, Duration) onProposedMoveBy;
+  final void Function(PlannedBlock, Duration) onProposedResizeBy;
 
   @override
   Widget build(BuildContext context) {
@@ -73,6 +81,12 @@ class DayTimeline extends StatelessWidget {
                           onTap: () => item.proposal != null
                               ? onProposedTap(item.proposal!)
                               : onAcceptedTap(item.block!),
+                          onMoveBy: (delta) => item.proposal != null
+                              ? onProposedMoveBy(item.proposal!, delta)
+                              : onAcceptedMoveBy(item.block!, delta),
+                          onResizeBy: (delta) => item.proposal != null
+                              ? onProposedResizeBy(item.proposal!, delta)
+                              : onAcceptedResizeBy(item.block!, delta),
                         );
                       },
                     ),

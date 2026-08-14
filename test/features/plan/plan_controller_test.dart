@@ -59,6 +59,32 @@ void main() {
     },
   );
 
+  test(
+    'manual fixed events are persisted locked and reject overlaps',
+    () async {
+      await controller.createFixedEvent(
+        note: 'School pickup',
+        start: DateTime.utc(2026, 8, 17, 12),
+        end: DateTime.utc(2026, 8, 17, 12, 30),
+      );
+
+      final saved = (await repository.currentSnapshot()).blocks.single;
+      expect(saved.taskId, isNull);
+      expect(saved.note, 'School pickup');
+      expect(saved.isLocked, isTrue);
+      expect(saved.isGenerated, isFalse);
+
+      await controller.createFixedEvent(
+        note: 'Overlapping event',
+        start: DateTime.utc(2026, 8, 17, 12, 15),
+        end: DateTime.utc(2026, 8, 17, 12, 45),
+      );
+
+      expect((await repository.currentSnapshot()).blocks, hasLength(1));
+      expect(controller.state.failure?.message, contains('overlaps'));
+    },
+  );
+
   test('moving and resizing a proposal stays ephemeral and locks it', () async {
     await controller.createProposal();
     final id = controller.state.proposalBlocks.single.id;
@@ -104,6 +130,32 @@ void main() {
     expect(controller.state.proposalBlocks, hasLength(1));
     expect((await repository.currentSnapshot()).blocks, hasLength(1));
   });
+
+  test(
+    'accepted replan atomically removes obsolete generated sessions',
+    () async {
+      final original = (await repository.currentSnapshot()).tasks.single;
+      await repository.saveTask(
+        original.copyWith(estimatedMinutes: 120, remainingMinutes: 120),
+      );
+      await controller.createProposal();
+      await controller.acceptAll();
+      expect((await repository.currentSnapshot()).blocks, hasLength(2));
+
+      final expanded = (await repository.currentSnapshot()).tasks.single;
+      await repository.saveTask(
+        expanded.copyWith(estimatedMinutes: 30, remainingMinutes: 30),
+      );
+      await controller.replan();
+      expect(controller.state.proposalBlocks, hasLength(1));
+
+      await controller.acceptAll();
+
+      final replanned = await repository.currentSnapshot();
+      expect(replanned.blocks, hasLength(1));
+      expect(replanned.blocks.single.duration, const Duration(minutes: 30));
+    },
+  );
 
   test(
     'completion reduces remaining duration while skip leaves it queued',

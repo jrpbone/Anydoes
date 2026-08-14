@@ -13,6 +13,7 @@ class AnydoesApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final preferences = ref.watch(appearanceProvider);
     ref.watch(notificationCoordinatorProvider);
+    ref.watch(recurrenceMaterializationProvider);
     return MaterialApp(
       title: 'Anydoes',
       debugShowCheckedModeBanner: false,

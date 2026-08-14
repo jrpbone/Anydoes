@@ -190,6 +190,22 @@ final class DayplanValidator {
           isMe: _boolean(map, 'isMe'),
         ),
     ];
+    if (document.kind == DayplanKind.fullBackup) {
+      final inboxes = lists.where((list) => list.isInbox).toList();
+      final meProfiles = profiles.where((profile) => profile.isMe).toList();
+      if (inboxes.length != 1 || inboxes.single.id != 'inbox') {
+        throw const _ValidationException(
+          DayplanValidationCode.incomplete,
+          'A full backup must contain the required Inbox list.',
+        );
+      }
+      if (meProfiles.length != 1 || meProfiles.single.id != 'me') {
+        throw const _ValidationException(
+          DayplanValidationCode.incomplete,
+          'A full backup must contain exactly one required Me profile.',
+        );
+      }
+    }
     final recurrenceRules = <RecurrenceRule>[];
     for (final map in recurrenceMaps) {
       try {

@@ -4,6 +4,7 @@ import 'package:anydoes/core/time/clock.dart';
 import 'package:anydoes/data/database/app_database.dart';
 import 'package:anydoes/data/repositories/drift_planner_repository.dart';
 import 'package:anydoes/domain/models/task.dart';
+import 'package:anydoes/features/plan/plan_controller.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -78,6 +79,7 @@ void main() {
     for (var day = 0; day < 7; day++) {
       expect(find.byKey(Key('week-day-$day')), findsOneWidget);
     }
+    expect(find.byKey(const Key('add-fixed-event')), findsOneWidget);
   });
 
   testWidgets(
@@ -98,6 +100,50 @@ void main() {
       expect((await repository.currentSnapshot()).blocks, hasLength(1));
     },
   );
+
+  testWidgets('fixed event dialog creates a locked manual calendar block', (
+    tester,
+  ) async {
+    final repository = await pumpPlan(tester, 800);
+
+    await tester.tap(find.byKey(const Key('add-fixed-event')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('fixed-event-name')),
+      'School pickup',
+    );
+    await tester.enterText(find.byKey(const Key('fixed-event-duration')), '30');
+    await tester.tap(find.widgetWithText(FilledButton, 'Add event').last);
+    await tester.pumpAndSettle();
+
+    final block = (await repository.currentSnapshot()).blocks.single;
+    expect(block.taskId, isNull);
+    expect(block.note, 'School pickup');
+    expect(block.isLocked, isTrue);
+    expect(block.isGenerated, isFalse);
+  });
+
+  testWidgets('pointer drag and resize edit a proposal and lock it', (
+    tester,
+  ) async {
+    await pumpPlan(tester, 1440);
+    await tester.tap(find.widgetWithText(FilledButton, 'Plan my tasks'));
+    await tester.pumpAndSettle();
+
+    await tester.drag(find.text('Draft proposal').last, const Offset(0, 80));
+    await tester.pumpAndSettle();
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(AnydoesApp)),
+    );
+    var proposal = container.read(planControllerProvider).proposalBlocks.single;
+    expect(proposal.start, DateTime.utc(2026, 8, 17, 9, 30));
+    expect(proposal.isLocked, isTrue);
+
+    await tester.drag(find.byIcon(Icons.drag_handle).last, const Offset(0, 80));
+    await tester.pumpAndSettle();
+    proposal = container.read(planControllerProvider).proposalBlocks.single;
+    expect(proposal.duration, const Duration(minutes: 75));
+  });
 
   testWidgets('impossible work displays missing time and recovery actions', (
     tester,
