@@ -3,6 +3,7 @@ import 'package:anydoes/app/providers.dart';
 import 'package:anydoes/features/settings/widgets/appearance_settings.dart';
 import 'package:anydoes/features/settings/widgets/availability_editor.dart';
 import 'package:anydoes/features/settings/widgets/date_exception_editor.dart';
+import 'package:anydoes/features/settings/widgets/data_portability_section.dart';
 import 'package:anydoes/features/settings/widgets/planning_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -34,6 +35,7 @@ class SettingsScreen extends ConsumerWidget {
         preferences: state.snapshot.preferences,
         onChanged: controller.setAppearance,
       ),
+      const DataPortabilitySection(),
     ];
     return SafeArea(
       child: LayoutBuilder(

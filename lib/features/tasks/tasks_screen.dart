@@ -4,6 +4,7 @@ import 'package:anydoes/features/tasks/widgets/quick_capture.dart';
 import 'package:anydoes/features/tasks/widgets/task_editor.dart';
 import 'package:anydoes/features/tasks/widgets/task_filters.dart';
 import 'package:anydoes/features/tasks/widgets/task_tile.dart';
+import 'package:anydoes/features/settings/backup_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -123,6 +124,15 @@ class _TaskContent extends StatelessWidget {
                   onPressed: () => _openEditor(context),
                   icon: const Icon(Icons.edit_calendar_outlined),
                 ),
+                if (state.query.listId != null) ...[
+                  const SizedBox(width: 8),
+                  IconButton.outlined(
+                    key: const Key('export-selected-list'),
+                    tooltip: 'Export selected list',
+                    onPressed: () => _exportList(context, state.query.listId!),
+                    icon: const Icon(Icons.ios_share_outlined),
+                  ),
+                ],
               ],
             ),
             const SizedBox(height: 18),
@@ -186,6 +196,19 @@ class _TaskContent extends StatelessWidget {
           onArchive: () => controller.archive(task),
         );
       },
+    );
+  }
+
+  Future<void> _exportList(BuildContext context, String listId) async {
+    final container = ProviderScope.containerOf(context);
+    final saved = await container
+        .read(backupControllerProvider.notifier)
+        .exportList(listId);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(saved ? 'List exported.' : 'List export cancelled.'),
+      ),
     );
   }
 

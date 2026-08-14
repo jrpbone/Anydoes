@@ -3,6 +3,7 @@ import 'package:anydoes/data/database/app_database.dart';
 import 'package:anydoes/data/repositories/drift_planner_repository.dart';
 import 'package:anydoes/data/notifications/local_notification_gateway.dart';
 import 'package:anydoes/data/notifications/notification_reconciler.dart';
+import 'package:anydoes/data/portability/dayplan_file_service.dart';
 import 'package:anydoes/domain/notifications/notification_gateway.dart';
 import 'package:anydoes/domain/repositories/planner_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -34,3 +35,7 @@ final notificationCoordinatorProvider =
         ref.watch(notificationReconcilerProvider),
       );
     });
+
+final dayplanFileServiceProvider = Provider<DayplanFileGateway>(
+  (ref) => DayplanFileService(),
+);
