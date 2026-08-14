@@ -1,6 +1,8 @@
 import 'package:anydoes/app/navigation/app_destination.dart';
 import 'package:anydoes/core/layout/breakpoints.dart';
 import 'package:anydoes/core/widgets/empty_state.dart';
+import 'package:anydoes/features/profiles/profiles_screen.dart';
+import 'package:anydoes/features/tasks/tasks_screen.dart';
 import 'package:flutter/material.dart';
 
 class AdaptiveShell extends StatefulWidget {
@@ -12,6 +14,7 @@ class AdaptiveShell extends StatefulWidget {
 
 class _AdaptiveShellState extends State<AdaptiveShell> {
   int _selectedIndex = 0;
+  final Set<int> _visited = {0};
 
   static const _pages = <Widget>[
     EmptyState(
@@ -19,16 +22,8 @@ class _AdaptiveShellState extends State<AdaptiveShell> {
       title: 'Shape your day',
       message: 'Your schedule and planning suggestions will appear here.',
     ),
-    EmptyState(
-      icon: Icons.task_alt,
-      title: 'Capture what matters',
-      message: 'Add tasks quickly, then give them as much detail as you need.',
-    ),
-    EmptyState(
-      icon: Icons.people_outline,
-      title: 'Your household',
-      message: 'Keep responsibilities clear with simple local profiles.',
-    ),
+    TasksScreen(),
+    ProfilesScreen(),
     EmptyState(
       icon: Icons.tune,
       title: 'Make planning yours',
@@ -36,7 +31,17 @@ class _AdaptiveShellState extends State<AdaptiveShell> {
     ),
   ];
 
-  void _select(int index) => setState(() => _selectedIndex = index);
+  void _select(int index) {
+    setState(() {
+      _selectedIndex = index;
+      _visited.add(index);
+    });
+  }
+
+  List<Widget> get _activePages => [
+    for (var index = 0; index < _pages.length; index++)
+      if (_visited.contains(index)) _pages[index] else const SizedBox.shrink(),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -53,7 +58,7 @@ class _AdaptiveShellState extends State<AdaptiveShell> {
   Widget _compact() {
     return Scaffold(
       body: SafeArea(
-        child: IndexedStack(index: _selectedIndex, children: _pages),
+        child: IndexedStack(index: _selectedIndex, children: _activePages),
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
@@ -122,7 +127,10 @@ class _AdaptiveShellState extends State<AdaptiveShell> {
               child: rail,
             ),
             Expanded(
-              child: IndexedStack(index: _selectedIndex, children: _pages),
+              child: IndexedStack(
+                index: _selectedIndex,
+                children: _activePages,
+              ),
             ),
           ],
         ),
