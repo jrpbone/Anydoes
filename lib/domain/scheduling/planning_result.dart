@@ -15,6 +15,7 @@ final class PlannedBlock {
     required this.start,
     required this.end,
     required this.reason,
+    this.isLocked = false,
   });
 
   final String id;
@@ -22,16 +23,27 @@ final class PlannedBlock {
   final DateTime start;
   final DateTime end;
   final SchedulingReason reason;
+  final bool isLocked;
 
   Duration get duration => end.difference(start);
 
-  ScheduleBlock toScheduleBlock({bool locked = false}) => ScheduleBlock(
+  PlannedBlock copyWith({DateTime? start, DateTime? end, bool? isLocked}) =>
+      PlannedBlock(
+        id: id,
+        taskId: taskId,
+        start: start ?? this.start,
+        end: end ?? this.end,
+        reason: reason,
+        isLocked: isLocked ?? this.isLocked,
+      );
+
+  ScheduleBlock toScheduleBlock({bool? locked}) => ScheduleBlock(
     id: id,
     taskId: taskId,
     start: start,
     end: end,
     state: ScheduleBlockState.proposed,
-    isLocked: locked,
+    isLocked: locked ?? isLocked,
   );
 }
 
