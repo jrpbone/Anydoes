@@ -1,4 +1,5 @@
 import 'package:anydoes/features/settings/settings_controller.dart';
+import 'package:anydoes/app/providers.dart';
 import 'package:anydoes/features/settings/widgets/appearance_settings.dart';
 import 'package:anydoes/features/settings/widgets/availability_editor.dart';
 import 'package:anydoes/features/settings/widgets/date_exception_editor.dart';
@@ -13,6 +14,7 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(settingsControllerProvider);
     final controller = ref.read(settingsControllerProvider.notifier);
+    final reminderWarning = ref.watch(notificationCoordinatorProvider);
     final cards = [
       AvailabilityEditor(
         windows: state.snapshot.weeklyAvailability,
@@ -60,7 +62,7 @@ class SettingsScreen extends ConsumerWidget {
                 ),
               ),
             ),
-            if (state.failure != null)
+            if (state.failure != null || reminderWarning != null)
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 sliver: SliverToBoxAdapter(
@@ -68,7 +70,7 @@ class SettingsScreen extends ConsumerWidget {
                     color: Theme.of(context).colorScheme.errorContainer,
                     child: Padding(
                       padding: const EdgeInsets.all(12),
-                      child: Text(state.failure!),
+                      child: Text(state.failure ?? reminderWarning!),
                     ),
                   ),
                 ),

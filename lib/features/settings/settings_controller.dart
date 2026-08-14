@@ -6,6 +6,7 @@ import 'package:anydoes/domain/models/availability.dart';
 import 'package:anydoes/domain/models/planner_snapshot.dart';
 import 'package:anydoes/domain/models/planning_preferences.dart';
 import 'package:anydoes/domain/repositories/planner_repository.dart';
+import 'package:anydoes/domain/notifications/notification_gateway.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final class SettingsState {
@@ -33,7 +34,10 @@ final class SettingsState {
 
 final settingsControllerProvider =
     StateNotifierProvider<SettingsController, SettingsState>((ref) {
-      return SettingsController(ref.watch(plannerRepositoryProvider));
+      return SettingsController(
+        ref.watch(plannerRepositoryProvider),
+        notificationGateway: ref.watch(notificationGatewayProvider),
+      );
     });
 
 final appearanceProvider = Provider<PlanningPreferences>(
@@ -41,11 +45,13 @@ final appearanceProvider = Provider<PlanningPreferences>(
 );
 
 final class SettingsController extends StateNotifier<SettingsState> {
-  SettingsController(this._repository) : super(SettingsState()) {
+  SettingsController(this._repository, {this._notificationGateway})
+    : super(SettingsState()) {
     ready = _start();
   }
 
   final PlannerRepository _repository;
+  final NotificationGateway? _notificationGateway;
   late final Future<void> ready;
   StreamSubscription<PlannerSnapshot>? _subscription;
 
@@ -124,6 +130,17 @@ final class SettingsController extends StateNotifier<SettingsState> {
     int? notificationOffsetMinutes,
     bool? notificationsEnabled,
   }) async {
+    if (notificationsEnabled == true &&
+        !state.snapshot.preferences.notificationsEnabled &&
+        _notificationGateway != null) {
+      final permission = await _notificationGateway.requestPermission();
+      if (permission != NotificationPermissionStatus.authorized) {
+        state = state.copyWith(
+          failure:
+              'Notification permission was not granted. Planning still works; use system settings to enable reminders.',
+        );
+      }
+    }
     await _savePreferences(
       state.snapshot.preferences.copyWith(
         horizonDays: horizonDays,

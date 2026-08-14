@@ -1,4 +1,5 @@
 import 'package:anydoes/app/navigation/adaptive_shell.dart';
+import 'package:anydoes/app/providers.dart';
 import 'package:anydoes/app/theme/calm_sky_theme.dart';
 import 'package:anydoes/domain/models/planning_preferences.dart';
 import 'package:anydoes/features/settings/settings_controller.dart';
@@ -11,6 +12,7 @@ class AnydoesApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final preferences = ref.watch(appearanceProvider);
+    ref.watch(notificationCoordinatorProvider);
     return MaterialApp(
       title: 'Anydoes',
       debugShowCheckedModeBanner: false,
