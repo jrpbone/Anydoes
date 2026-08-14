@@ -32,7 +32,7 @@ class ScheduleBlockCard extends StatelessWidget {
       child: Card(
         color: proposed
             ? colors.primaryContainer.withValues(alpha: 0.55)
-            : Colors.white,
+            : colors.surfaceContainerLowest,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
           side: BorderSide(

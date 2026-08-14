@@ -37,6 +37,42 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 650;
         final expanded = constraints.maxWidth >= 1000;
+        if (compact) {
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: ListView(
+                children: [
+                  _header(context, state, controller, true),
+                  if (state.failure != null) ...[
+                    const SizedBox(height: 8),
+                    _failureCard(context, state),
+                  ],
+                  if (state.proposalBlocks.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    _proposalActions(controller),
+                  ],
+                  if (state.conflicts.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    _conflictList(
+                      state,
+                      controller,
+                      height: 270,
+                      itemWidth: constraints.maxWidth - 28,
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: constraints.maxHeight > 650
+                        ? constraints.maxHeight - 190
+                        : 460,
+                    child: _day(state, controller),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
         return SafeArea(
           child: Padding(
             padding: EdgeInsets.all(compact ? 14 : 20),
@@ -46,15 +82,7 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
                 _header(context, state, controller, compact),
                 if (state.failure != null) ...[
                   const SizedBox(height: 8),
-                  Card(
-                    color: Theme.of(context).colorScheme.errorContainer,
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Text(
-                        '${state.failure!.message} ${state.failure!.recovery}',
-                      ),
-                    ),
-                  ),
+                  _failureCard(context, state),
                 ],
                 if (state.proposalBlocks.isNotEmpty) ...[
                   const SizedBox(height: 10),
@@ -62,26 +90,7 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
                 ],
                 if (state.conflicts.isNotEmpty) ...[
                   const SizedBox(height: 10),
-                  SizedBox(
-                    height: 270,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: state.conflicts.length,
-                      separatorBuilder: (_, _) => const SizedBox(width: 10),
-                      itemBuilder: (context, index) {
-                        final conflict = state.conflicts[index];
-                        return SizedBox(
-                          width: compact ? constraints.maxWidth - 28 : 390,
-                          child: ConflictCard(
-                            conflict: conflict,
-                            task: _task(state, conflict.taskId),
-                            onAction: (action) => controller
-                                .applyRecoveryAction(conflict, action),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
+                  _conflictList(state, controller, height: 270, itemWidth: 390),
                 ],
                 const SizedBox(height: 12),
                 Expanded(
@@ -138,11 +147,15 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
               ),
             ),
             if (compact)
-              IconButton.filledTonal(
-                key: const Key('open-task-queue'),
-                tooltip: 'Open unscheduled task queue',
-                onPressed: () => _showQueue(context, state),
-                icon: const Icon(Icons.inbox_outlined),
+              Semantics(
+                label: 'Open unscheduled task queue',
+                button: true,
+                child: IconButton.filledTonal(
+                  key: const Key('open-task-queue'),
+                  tooltip: 'Open unscheduled task queue',
+                  onPressed: () => _showQueue(context, state),
+                  icon: const Icon(Icons.inbox_outlined),
+                ),
               ),
           ],
         ),
@@ -222,6 +235,40 @@ class _PlanScreenState extends ConsumerState<PlanScreen> {
       ),
     );
   }
+
+  Widget _failureCard(BuildContext context, PlanState state) => Card(
+    color: Theme.of(context).colorScheme.errorContainer,
+    child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: Text('${state.failure!.message} ${state.failure!.recovery}'),
+    ),
+  );
+
+  Widget _conflictList(
+    PlanState state,
+    PlanController controller, {
+    required double height,
+    required double itemWidth,
+  }) => SizedBox(
+    height: height,
+    child: ListView.separated(
+      scrollDirection: Axis.horizontal,
+      itemCount: state.conflicts.length,
+      separatorBuilder: (_, _) => const SizedBox(width: 10),
+      itemBuilder: (context, index) {
+        final conflict = state.conflicts[index];
+        return SizedBox(
+          width: itemWidth,
+          child: ConflictCard(
+            conflict: conflict,
+            task: _task(state, conflict.taskId),
+            onAction: (action) =>
+                controller.applyRecoveryAction(conflict, action),
+          ),
+        );
+      },
+    ),
+  );
 
   Widget _day(PlanState state, PlanController controller) => DayTimeline(
     date: _selectedDate,

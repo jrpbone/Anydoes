@@ -93,6 +93,7 @@ class _TaskEditorState extends State<TaskEditor> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
+                  isExpanded: true,
                   initialValue: _listId,
                   decoration: const InputDecoration(labelText: 'List'),
                   items: [
@@ -104,6 +105,7 @@ class _TaskEditorState extends State<TaskEditor> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<TaskPriority>(
+                  isExpanded: true,
                   initialValue: _priority,
                   decoration: const InputDecoration(labelText: 'Priority'),
                   items: [
@@ -164,6 +166,7 @@ class _TaskEditorState extends State<TaskEditor> {
                   ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String?>(
+                  isExpanded: true,
                   initialValue: _assigneeId,
                   decoration: const InputDecoration(labelText: 'Assignee'),
                   items: [
@@ -197,6 +200,7 @@ class _TaskEditorState extends State<TaskEditor> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<RecurrenceFrequency?>(
+                  isExpanded: true,
                   initialValue: _recurrenceFrequency,
                   decoration: const InputDecoration(labelText: 'Repeat'),
                   items: [

@@ -118,11 +118,15 @@ class _TaskContent extends StatelessWidget {
                     ],
                   ),
                 ),
-                IconButton.filledTonal(
-                  key: const Key('open-task-editor'),
-                  tooltip: 'Open full task editor',
-                  onPressed: () => _openEditor(context),
-                  icon: const Icon(Icons.edit_calendar_outlined),
+                Semantics(
+                  label: 'Open full task editor',
+                  button: true,
+                  child: IconButton.filledTonal(
+                    key: const Key('open-task-editor'),
+                    tooltip: 'Open full task editor',
+                    onPressed: () => _openEditor(context),
+                    icon: const Icon(Icons.edit_calendar_outlined),
+                  ),
                 ),
                 if (state.query.listId != null) ...[
                   const SizedBox(width: 8),

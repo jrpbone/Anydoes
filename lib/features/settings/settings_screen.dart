@@ -86,7 +86,7 @@ class SettingsScreen extends ConsumerWidget {
                             crossAxisCount: 2,
                             crossAxisSpacing: 14,
                             mainAxisSpacing: 14,
-                            mainAxisExtent: 430,
+                            mainAxisExtent: 540,
                           ),
                       delegate: SliverChildListDelegate(cards),
                     )
