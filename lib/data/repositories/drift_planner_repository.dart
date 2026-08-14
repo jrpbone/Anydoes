@@ -207,6 +207,31 @@ final class DriftPlannerRepository implements PlannerRepository {
   });
 
   @override
+  Future<void> saveTaskWithRecurrence(
+    PlannerTask task,
+    RecurrenceRule recurrenceRule,
+  ) => _guard(() async {
+    await database.transaction(() async {
+      await database
+          .into(database.recurrenceRuleEntries)
+          .insertOnConflictUpdate(recurrenceRule.toCompanion());
+      await _validateParentChain(task);
+      await database
+          .into(database.taskEntries)
+          .insertOnConflictUpdate(task.toCompanion());
+      for (final tagId in task.tagIds) {
+        await database
+            .into(database.taskTagEntries)
+            .insert(
+              TaskTagEntriesCompanion.insert(taskId: task.id, tagId: tagId),
+              mode: InsertMode.insertOrIgnore,
+            );
+      }
+    });
+    _notify();
+  });
+
+  @override
   Future<void> saveTasks(Iterable<PlannerTask> tasks) => _guard(() async {
     await database.transaction(() async {
       for (final task in tasks) {

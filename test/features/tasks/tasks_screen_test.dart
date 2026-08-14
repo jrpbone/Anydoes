@@ -4,6 +4,7 @@ import 'package:anydoes/core/time/clock.dart';
 import 'package:anydoes/data/database/app_database.dart';
 import 'package:anydoes/data/repositories/drift_planner_repository.dart';
 import 'package:anydoes/domain/models/task.dart';
+import 'package:anydoes/domain/models/recurrence_rule.dart';
 import 'package:anydoes/features/tasks/tasks_controller.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -113,4 +114,57 @@ void main() {
     expect(saved.minimumSessionMinutes, 30);
     expect(saved.maximumSessionMinutes, 60);
   });
+
+  test(
+    'controller creates a recurrence rule with its first occurrence',
+    () async {
+      final controller = TasksController(repository, FixedAppClock(now));
+      addTearDown(controller.dispose);
+
+      await controller.createTask(
+        const TaskDraft(
+          title: 'Weekly review',
+          recurrence: RecurrenceDraft(
+            frequency: RecurrenceFrequency.weekly,
+            weekdays: {DateTime.saturday},
+          ),
+        ),
+      );
+
+      final snapshot = await repository.currentSnapshot();
+      expect(
+        snapshot.recurrenceRules.single.frequency,
+        RecurrenceFrequency.weekly,
+      );
+      expect(
+        snapshot.tasks.single.recurrenceRuleId,
+        snapshot.recurrenceRules.single.id,
+      );
+      expect(snapshot.tasks.single.recurrenceSeriesId, isNotNull);
+      expect(snapshot.tasks.single.occurrenceDate, DateTime.utc(2026, 8, 15));
+    },
+  );
+
+  test(
+    'controller completes an unestimated task without inventing duration',
+    () async {
+      await repository.saveTask(
+        PlannerTask.create(
+          id: 'unestimated',
+          title: 'Call the dentist',
+          listId: 'inbox',
+          createdAt: now,
+        ),
+      );
+      final controller = TasksController(repository, FixedAppClock(now));
+      addTearDown(controller.dispose);
+      final task = (await repository.currentSnapshot()).tasks.single;
+
+      await controller.toggleComplete(task, true);
+
+      final saved = (await repository.currentSnapshot()).tasks.single;
+      expect(saved.status, TaskStatus.completed);
+      expect(saved.remainingMinutes, isNull);
+    },
+  );
 }

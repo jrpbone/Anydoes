@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:anydoes/core/result/app_failure.dart';
 import 'package:anydoes/core/time/clock.dart';
 import 'package:anydoes/domain/models/planner_snapshot.dart';
+import 'package:anydoes/domain/models/recurrence_rule.dart';
 import 'package:anydoes/domain/models/tag.dart';
 import 'package:anydoes/domain/models/task.dart';
 import 'package:anydoes/domain/models/task_list.dart';
@@ -12,6 +13,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 enum TaskStatusFilter { open, completed, archived, all }
+
+final class RecurrenceDraft {
+  const RecurrenceDraft({
+    required this.frequency,
+    this.interval = 1,
+    this.weekdays = const {},
+    this.until,
+    this.occurrenceCount,
+  });
+
+  final RecurrenceFrequency frequency;
+  final int interval;
+  final Set<int> weekdays;
+  final DateTime? until;
+  final int? occurrenceCount;
+}
 
 final class TaskQuery {
   const TaskQuery({
@@ -87,6 +104,7 @@ final class TaskDraft {
     this.assigneeProfileId,
     this.includeInMyPlan = false,
     this.tagNames = const [],
+    this.recurrence,
   });
 
   final String title;
@@ -103,6 +121,7 @@ final class TaskDraft {
   final String? assigneeProfileId;
   final bool includeInMyPlan;
   final List<String> tagNames;
+  final RecurrenceDraft? recurrence;
 }
 
 final class TasksState {
@@ -191,26 +210,47 @@ final class TasksController extends StateNotifier<TasksState> {
         tagIds.add(tag.id);
       }
       final now = _clock.now();
-      await _repository.saveTask(
-        PlannerTask.create(
-          id: _uuid.v4(),
-          title: draft.title,
-          notes: draft.notes,
-          listId: draft.listId,
-          parentTaskId: draft.parentTaskId,
-          priority: draft.priority,
-          earliestStart: draft.earliestStart,
-          deadline: draft.deadline,
-          estimatedMinutes: draft.estimatedMinutes,
-          allowSplit: draft.allowSplit,
-          minimumSessionMinutes: draft.minimumSessionMinutes,
-          maximumSessionMinutes: draft.maximumSessionMinutes,
-          assigneeProfileId: draft.assigneeProfileId,
-          includeInMyPlan: draft.includeInMyPlan,
-          createdAt: now,
-          tagIds: tagIds,
-        ),
+      final taskId = _uuid.v4();
+      final recurrenceRuleId = draft.recurrence == null ? null : _uuid.v4();
+      final task = PlannerTask.create(
+        id: taskId,
+        title: draft.title,
+        notes: draft.notes,
+        listId: draft.listId,
+        parentTaskId: draft.parentTaskId,
+        priority: draft.priority,
+        earliestStart: draft.earliestStart,
+        deadline: draft.deadline,
+        estimatedMinutes: draft.estimatedMinutes,
+        allowSplit: draft.allowSplit,
+        minimumSessionMinutes: draft.minimumSessionMinutes,
+        maximumSessionMinutes: draft.maximumSessionMinutes,
+        assigneeProfileId: draft.assigneeProfileId,
+        includeInMyPlan: draft.includeInMyPlan,
+        recurrenceRuleId: recurrenceRuleId,
+        recurrenceSeriesId: draft.recurrence == null ? null : taskId,
+        occurrenceDate: draft.recurrence == null
+            ? null
+            : DateTime.utc(now.year, now.month, now.day),
+        createdAt: now,
+        tagIds: tagIds,
       );
+      if (draft.recurrence == null) {
+        await _repository.saveTask(task);
+      } else {
+        final recurrence = draft.recurrence!;
+        await _repository.saveTaskWithRecurrence(
+          task,
+          RecurrenceRule(
+            id: recurrenceRuleId!,
+            frequency: recurrence.frequency,
+            interval: recurrence.interval,
+            weekdays: recurrence.weekdays,
+            until: recurrence.until,
+            occurrenceCount: recurrence.occurrenceCount,
+          ),
+        );
+      }
     } catch (error) {
       _setFailure(error);
       rethrow;
@@ -225,7 +265,11 @@ final class TasksController extends StateNotifier<TasksState> {
       _repository.saveTask(
         task.copyWith(
           status: complete ? TaskStatus.completed : TaskStatus.open,
-          remainingMinutes: complete ? 0 : task.estimatedMinutes,
+          remainingMinutes: task.estimatedMinutes == null
+              ? null
+              : complete
+              ? 0
+              : task.estimatedMinutes,
           completedAt: complete ? _clock.now() : null,
           updatedAt: _clock.now(),
         ),

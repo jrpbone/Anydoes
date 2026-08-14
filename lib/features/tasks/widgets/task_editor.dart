@@ -1,5 +1,6 @@
 import 'package:anydoes/domain/models/planner_snapshot.dart';
 import 'package:anydoes/domain/models/task.dart';
+import 'package:anydoes/domain/models/recurrence_rule.dart';
 import 'package:anydoes/features/tasks/tasks_controller.dart';
 import 'package:flutter/material.dart';
 
@@ -25,6 +26,7 @@ class _TaskEditorState extends State<TaskEditor> {
   String? _assigneeId;
   bool _allowSplit = false;
   bool _includeInPlan = false;
+  RecurrenceFrequency? _recurrenceFrequency;
 
   @override
   void dispose() {
@@ -54,6 +56,9 @@ class _TaskEditorState extends State<TaskEditor> {
         assigneeProfileId: _assigneeId,
         includeInMyPlan: _includeInPlan,
         tagNames: _tags.text.split(','),
+        recurrence: _recurrenceFrequency == null
+            ? null
+            : RecurrenceDraft(frequency: _recurrenceFrequency!),
       ),
     );
   }
@@ -189,6 +194,24 @@ class _TaskEditorState extends State<TaskEditor> {
                     labelText: 'Tags',
                     hintText: 'home, errands',
                   ),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<RecurrenceFrequency?>(
+                  initialValue: _recurrenceFrequency,
+                  decoration: const InputDecoration(labelText: 'Repeat'),
+                  items: [
+                    const DropdownMenuItem(
+                      value: null,
+                      child: Text('Does not repeat'),
+                    ),
+                    for (final frequency in RecurrenceFrequency.values)
+                      DropdownMenuItem(
+                        value: frequency,
+                        child: Text(frequency.name),
+                      ),
+                  ],
+                  onChanged: (value) =>
+                      setState(() => _recurrenceFrequency = value),
                 ),
               ],
             ),

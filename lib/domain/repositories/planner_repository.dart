@@ -16,6 +16,10 @@ abstract interface class PlannerRepository {
   Future<PlannerSnapshot> currentSnapshot();
   Future<void> initializeDefaults();
   Future<void> saveTask(PlannerTask task);
+  Future<void> saveTaskWithRecurrence(
+    PlannerTask task,
+    RecurrenceRule recurrenceRule,
+  );
   Future<void> saveTasks(Iterable<PlannerTask> tasks);
   Future<void> saveList(TaskList list);
   Future<void> saveTag(TaskTag tag);
