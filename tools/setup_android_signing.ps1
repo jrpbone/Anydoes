@@ -19,10 +19,10 @@ param(
     [string]$Organization = 'Anydoes',
 
     [Parameter()]
-    [string]$City = 'Manila',
+    [string]$City = 'Ligao',
 
     [Parameter()]
-    [string]$State = 'Metro Manila',
+    [string]$State = 'Albay',
 
     [Parameter()]
     [ValidatePattern('^[A-Za-z]{2}$')]
