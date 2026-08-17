@@ -1,6 +1,21 @@
 <div align="center">
   <img src="assets/branding/anydoes_app_icon.png" alt="Anydoes app icon" width="128" />
 
+  <h1>Anydoes</h1>
+
+  <p><strong>An offline-first, duration-aware personal planner built for realistic scheduling.</strong></p>
+
+  <p>
+    <img src="https://img.shields.io/badge/Flutter-Multiplatform-02569B?logo=flutter&amp;logoColor=white" alt="Flutter" />
+    <img src="https://img.shields.io/badge/Dart-3.12%2B-0175C2?logo=dart&amp;logoColor=white" alt="Dart 3.12+" />
+    <img src="https://img.shields.io/badge/Riverpod-2.6-6C5CE7" alt="Riverpod 2.6" />
+    <img src="https://img.shields.io/badge/Drift-2.34-0553B1" alt="Drift 2.34" />
+    <img src="https://img.shields.io/badge/SQLite-Local%20Database-003B57?logo=sqlite&amp;logoColor=white" alt="SQLite" />
+    <img src="https://img.shields.io/badge/Material-3-6750A4?logo=materialdesign&amp;logoColor=white" alt="Material 3" />
+  </p>
+
+</div>
+
 ---
 
 ## Why Anydoes?
