@@ -1,42 +1,17 @@
 <div align="center">
   <img src="assets/branding/anydoes_app_icon.png" alt="Anydoes app icon" width="128" />
 
-  <h1>Anydoes</h1>
-
-  <p><strong>Turn a task list into a schedule you can actually follow.</strong></p>
-  <p>
-    An offline-first, duration-aware personal planner built with Flutter.<br />
-    Capture work quickly, generate a realistic plan, and stay in control of every scheduled block.
-  </p>
-
-  <p>
-    <img alt="Flutter" src="https://img.shields.io/badge/Flutter-Multiplatform-02569B?logo=flutter&amp;logoColor=white" />
-    <img alt="Dart 3.12 or newer" src="https://img.shields.io/badge/Dart-3.12%2B-0175C2?logo=dart&amp;logoColor=white" />
-    <img alt="Version 1.0.0" src="https://img.shields.io/badge/version-1.0.0-2F74DA" />
-    <img alt="100 automated tests" src="https://img.shields.io/badge/tests-100%20passing-2E7D32" />
-    <img alt="Offline first" src="https://img.shields.io/badge/data-local--first-6D5DD3" />
-  </p>
-
-  <p>
-    <a href="#why-anydoes">Why Anydoes</a> &bull;
-    <a href="#engineering-highlights">Engineering</a> &bull;
-    <a href="#technology">Technology</a> &bull;
-    <a href="#architecture">Architecture</a> &bull;
-    <a href="#getting-started">Get started</a>
-  </p>
-</div>
-
 ---
 
 ## Why Anydoes?
 
-Most task managers record *what* needs doing. Anydoes also reasons about *when* the work can happen.
+Most task managers record _what_ needs doing. Anydoes also reasons about _when_ the work can happen.
 
 Tasks can include duration estimates, deadlines, priorities, recurrence rules, availability constraints, assignees, and split-session limits. A deterministic scheduling engine turns those constraints into an editable proposal—without writing anything to the calendar until the user accepts it.
 
-| 100 automated tests | 7 visual baselines | 3 adaptive layouts | 90-day recurrence window | 0 required accounts |
-| :---: | :---: | :---: | :---: | :---: |
-| Domain, data, UI, and accessibility | Calm Sky golden coverage | Phone, tablet, and desktop | Rolling and bounded | Local by default |
+|         100 automated tests         |    7 visual baselines    |     3 adaptive layouts     | 90-day recurrence window | 0 required accounts |
+| :---------------------------------: | :----------------------: | :------------------------: | :----------------------: | :-----------------: |
+| Domain, data, UI, and accessibility | Calm Sky golden coverage | Phone, tablet, and desktop |   Rolling and bounded    |  Local by default   |
 
 ## From intention to schedule
 
@@ -49,19 +24,19 @@ When work cannot fit, Anydoes reports the missing time and offers concrete recov
 
 ## Core capabilities
 
-| Plan intelligently | Stay in control |
-| --- | --- |
-| Duration-aware scheduling with a deterministic 50/30/20 deadline, priority, and duration score | Proposals remain unsaved until explicitly accepted |
-| Split long tasks into legal sessions within weekly availability | Move, resize, remove, lock, skip, or complete schedule blocks |
-| Respect fixed events, locked work, earliest starts, deadlines, and date exceptions | Replan transactionally without disturbing manual decisions |
-| Surface exact conflicts and recovery options | Switch between responsive day and week planning views |
+| Plan intelligently                                                                             | Stay in control                                               |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| Duration-aware scheduling with a deterministic 50/30/20 deadline, priority, and duration score | Proposals remain unsaved until explicitly accepted            |
+| Split long tasks into legal sessions within weekly availability                                | Move, resize, remove, lock, skip, or complete schedule blocks |
+| Respect fixed events, locked work, earliest starts, deadlines, and date exceptions             | Replan transactionally without disturbing manual decisions    |
+| Surface exact conflicts and recovery options                                                   | Switch between responsive day and week planning views         |
 
-| Organize deeply | Own your data |
-| --- | --- |
-| Inbox, custom lists, tags, profiles, subtasks, search, and combined filters | Local Drift/SQLite persistence with no backend dependency |
-| Recurring tasks with bounded rolling materialization | Versioned and checksummed `.dayplan` backup and restore |
-| Local reminders for accepted blocks and deadline-only tasks | Isolated shared-list import/export with identifier remapping |
-| Light, dark, high-contrast, and reduced-motion preferences | Validation completes before any import writes occur |
+| Organize deeply                                                             | Own your data                                                |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| Inbox, custom lists, tags, profiles, subtasks, search, and combined filters | Local Drift/SQLite persistence with no backend dependency    |
+| Recurring tasks with bounded rolling materialization                        | Versioned and checksummed`.dayplan` backup and restore       |
+| Local reminders for accepted blocks and deadline-only tasks                 | Isolated shared-list import/export with identifier remapping |
+| Light, dark, high-contrast, and reduced-motion preferences                  | Validation completes before any import writes occur          |
 
 ## Engineering highlights
 
@@ -74,16 +49,16 @@ When work cannot fit, Anydoes reports the missing time and offers concrete recov
 
 ## Technology
 
-| Layer | Technology | Responsibility |
-| --- | --- | --- |
-| Interface | **Flutter · Material 3** | Responsive Calm Sky UI across mobile, web, and desktop |
-| Language | **Dart 3.12+** | Null-safe application and domain logic |
-| State management | **Riverpod** | Dependency injection, feature controllers, and reactive state |
-| Local persistence | **Drift · SQLite** | Typed queries, schema generation, and transactional storage |
-| Scheduling | **Pure Dart services** | Ranking, interval discovery, proposals, and recurrence |
-| Device integration | **flutter_local_notifications · flutter_timezone** | Local reminder reconciliation and named time zones |
-| Portability | **file_selector · path_provider · crypto** | Cross-platform `.dayplan` files and SHA-256 integrity checks |
-| Testing | **flutter_test · mocktail · golden tests** | Domain, repository, widget, responsive, accessibility, and visual coverage |
+| Layer              | Technology                                         | Responsibility                                                             |
+| ------------------ | -------------------------------------------------- | -------------------------------------------------------------------------- |
+| Interface          | **Flutter · Material 3**                           | Responsive Calm Sky UI across mobile, web, and desktop                     |
+| Language           | **Dart 3.12+**                                     | Null-safe application and domain logic                                     |
+| State management   | **Riverpod**                                       | Dependency injection, feature controllers, and reactive state              |
+| Local persistence  | **Drift · SQLite**                                 | Typed queries, schema generation, and transactional storage                |
+| Scheduling         | **Pure Dart services**                             | Ranking, interval discovery, proposals, and recurrence                     |
+| Device integration | **flutter_local_notifications · flutter_timezone** | Local reminder reconciliation and named time zones                         |
+| Portability        | **file_selector · path_provider · crypto**         | Cross-platform`.dayplan` files and SHA-256 integrity checks                |
+| Testing            | **flutter_test · mocktail · golden tests**         | Domain, repository, widget, responsive, accessibility, and visual coverage |
 
 ## Architecture
 
@@ -136,14 +111,14 @@ test/
 
 ## Platform support
 
-| Target | Repository status | Notes |
-| --- | :---: | --- |
-| Android | Configured | Native runner, launcher assets, and signing helper included |
-| Web | Verified | Debug build and Wasm dry run pass; notifications depend on browser support |
-| Windows | Configured | Requires Visual Studio with the Desktop development with C++ workload |
-| Linux | Configured | Requires the standard Flutter Linux desktop toolchain |
-| macOS | Configured | Requires the standard Flutter macOS desktop toolchain |
-| iOS | Not configured | No iOS runner is included in this checkout |
+| Target  | Repository status | Notes                                                                      |
+| ------- | :---------------: | -------------------------------------------------------------------------- |
+| Android |    Configured     | Native runner, launcher assets, and signing helper included                |
+| Web     |     Verified      | Debug build and Wasm dry run pass; notifications depend on browser support |
+| Windows |    Configured     | Requires Visual Studio with the Desktop development with C++ workload      |
+| Linux   |    Configured     | Requires the standard Flutter Linux desktop toolchain                      |
+| macOS   |    Configured     | Requires the standard Flutter macOS desktop toolchain                      |
+| iOS     |  Not configured   | No iOS runner is included in this checkout                                 |
 
 ## Getting started
 
@@ -177,19 +152,6 @@ flutter build windows
 ```
 
 Drift-generated sources are committed. Rerun code generation after changing a table or generated query.
-
-## Quality and verification
-
-The current suite contains **100 passing automated tests** and **seven golden baselines**, covering scheduling rules, recurrence, transactional persistence, data portability, responsive workflows, accessibility, and UI behavior.
-
-```powershell
-dart format --output=none --set-exit-if-changed lib test
-flutter analyze
-flutter test
-flutter test test/goldens/calm_sky_golden_test.dart
-```
-
-See the [criterion-by-criterion acceptance evidence](docs/verification/anydoes-v1-acceptance.md) for the full verification matrix and platform build notes.
 
 ## Local-first data and portability
 
